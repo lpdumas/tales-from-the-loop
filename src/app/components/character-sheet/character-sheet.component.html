@@ -1,0 +1,463 @@
+<div class="sheet-container">
+  <header class="hero">
+    <div class="hero-title">
+      <span class="hero-kicker">Tales From the Loop</span>
+      <h1>Feuille de personnage</h1>
+      <p>Tout est sauvegardé automatiquement dans ce navigateur.</p>
+    </div>
+    <div class="hero-actions">
+      <span class="save-chip" [class.saving]="saveStatus() === 'saving'">
+        {{ saveStatus() === 'saving' ? 'Sauvegarde...' : 'Sauvegardé' }}
+      </span>
+      <span class="chip">Local-only</span>
+    </div>
+  </header>
+
+  <main class="sheet-grid">
+    <div class="column left">
+      <!-- Identity -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Identité</mat-card-title>
+          <span class="panel-tag">Kid / Teen</span>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="field-grid three">
+            <mat-form-field appearance="outline">
+              <mat-label>Nom</mat-label>
+              <input
+                matInput
+                [ngModel]="char().identity.name"
+                (ngModelChange)="updateIdentity('name', $event)"
+                placeholder="Nom du personnage"
+              />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Type</mat-label>
+              <input
+                matInput
+                [ngModel]="char().identity.type"
+                (ngModelChange)="updateIdentity('type', $event)"
+                placeholder="Bookworm, Troublemaker..."
+              />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Âge</mat-label>
+              <input
+                matInput
+                [ngModel]="char().identity.age"
+                (ngModelChange)="updateIdentity('age', $event)"
+                placeholder="12"
+              />
+            </mat-form-field>
+          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea
+              matInput
+              [ngModel]="char().identity.description"
+              (ngModelChange)="updateIdentity('description', $event)"
+              rows="3"
+              placeholder="Portrait rapide, style, attitude..."
+            ></textarea>
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Drives -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Vibes & Moteurs</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="field-grid two">
+            <mat-form-field appearance="outline">
+              <mat-label>Chanson favorite</mat-label>
+              <input
+                matInput
+                [ngModel]="char().identity.favoriteSong"
+                (ngModelChange)="updateIdentity('favoriteSong', $event)"
+                placeholder="Synthwave, rock..."
+              />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Drive</mat-label>
+              <input
+                matInput
+                [ngModel]="char().identity.drive"
+                (ngModelChange)="updateIdentity('drive', $event)"
+                placeholder="Ce qui te pousse à agir"
+              />
+            </mat-form-field>
+          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Problème</mat-label>
+            <textarea
+              matInput
+              [ngModel]="char().identity.problem"
+              (ngModelChange)="updateIdentity('problem', $event)"
+              rows="2"
+              placeholder="Ton défaut ou dilemme"
+            ></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Fierté</mat-label>
+            <textarea
+              matInput
+              [ngModel]="char().identity.pride"
+              (ngModelChange)="updateIdentity('pride', $event)"
+              rows="2"
+              placeholder="Ton talent secret"
+            ></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Ancre</mat-label>
+            <textarea
+              matInput
+              [ngModel]="char().identity.anchor"
+              (ngModelChange)="updateIdentity('anchor', $event)"
+              rows="2"
+              placeholder="Ce qui te ramène à la réalité"
+            ></textarea>
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Relationships -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Relations</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="stack">
+            @for (rel of char().relationships; track $index) {
+              <div class="line-item">
+                <span class="label">{{ rel.label }}</span>
+                <mat-form-field appearance="outline" class="flex-grow">
+                  <input
+                    matInput
+                    [ngModel]="rel.name"
+                    (ngModelChange)="updateRelationship($index, $event)"
+                  />
+                </mat-form-field>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Notes -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Notes</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width">
+            <textarea
+              matInput
+              [ngModel]="char().notes"
+              (ngModelChange)="updateField('notes', $event)"
+              rows="5"
+              placeholder="Faits marquants, indices, théorie du Loop..."
+            ></textarea>
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="column right">
+      <!-- Stats & Skills -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Attributs</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <!-- Body -->
+          <div class="attribute">
+            <div class="attribute-head">
+              <span>Body</span>
+              <app-rating
+                [value]="char().stats.body"
+                (valueChange)="updateStat('body', $event)"
+                [max]="5"
+              />
+            </div>
+            <div class="skill-list">
+              <div class="skill-row">
+                <span>Sneak</span
+                ><app-rating
+                  [value]="char().skills.sneak"
+                  (valueChange)="updateSkill('sneak', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Force</span
+                ><app-rating
+                  [value]="char().skills.force"
+                  (valueChange)="updateSkill('force', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Move</span
+                ><app-rating
+                  [value]="char().skills.move"
+                  (valueChange)="updateSkill('move', $event)"
+                  [max]="5"
+                />
+              </div>
+            </div>
+          </div>
+          <!-- Tech -->
+          <div class="attribute">
+            <div class="attribute-head">
+              <span>Tech</span>
+              <app-rating
+                [value]="char().stats.tech"
+                (valueChange)="updateStat('tech', $event)"
+                [max]="5"
+              />
+            </div>
+            <div class="skill-list">
+              <div class="skill-row">
+                <span>Tinker</span
+                ><app-rating
+                  [value]="char().skills.tinker"
+                  (valueChange)="updateSkill('tinker', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Program</span
+                ><app-rating
+                  [value]="char().skills.program"
+                  (valueChange)="updateSkill('program', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Calculate</span
+                ><app-rating
+                  [value]="char().skills.calculate"
+                  (valueChange)="updateSkill('calculate', $event)"
+                  [max]="5"
+                />
+              </div>
+            </div>
+          </div>
+          <!-- Heart -->
+          <div class="attribute">
+            <div class="attribute-head">
+              <span>Heart</span>
+              <app-rating
+                [value]="char().stats.heart"
+                (valueChange)="updateStat('heart', $event)"
+                [max]="5"
+              />
+            </div>
+            <div class="skill-list">
+              <div class="skill-row">
+                <span>Contact</span
+                ><app-rating
+                  [value]="char().skills.contact"
+                  (valueChange)="updateSkill('contact', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Charm</span
+                ><app-rating
+                  [value]="char().skills.charm"
+                  (valueChange)="updateSkill('charm', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Lead</span
+                ><app-rating
+                  [value]="char().skills.lead"
+                  (valueChange)="updateSkill('lead', $event)"
+                  [max]="5"
+                />
+              </div>
+            </div>
+          </div>
+          <!-- Mind -->
+          <div class="attribute">
+            <div class="attribute-head">
+              <span>Mind</span>
+              <app-rating
+                [value]="char().stats.mind"
+                (valueChange)="updateStat('mind', $event)"
+                [max]="5"
+              />
+            </div>
+            <div class="skill-list">
+              <div class="skill-row">
+                <span>Investigate</span
+                ><app-rating
+                  [value]="char().skills.investigate"
+                  (valueChange)="updateSkill('investigate', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Comprehend</span
+                ><app-rating
+                  [value]="char().skills.comprehend"
+                  (valueChange)="updateSkill('comprehend', $event)"
+                  [max]="5"
+                />
+              </div>
+              <div class="skill-row">
+                <span>Empathize</span
+                ><app-rating
+                  [value]="char().skills.empathize"
+                  (valueChange)="updateSkill('empathize', $event)"
+                  [max]="5"
+                />
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Luck & XP -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Luck & XP</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="track-row">
+            <span>Luck</span>
+            <app-rating
+              [value]="char().luck"
+              (valueChange)="updateField('luck', $event)"
+              [max]="10"
+              [wide]="true"
+            />
+          </div>
+          <div class="track-row">
+            <span>Expérience</span>
+            <app-rating
+              [value]="char().experience"
+              (valueChange)="updateField('experience', $event)"
+              [max]="10"
+              [wide]="true"
+            />
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Conditions -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Conditions</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="condition-grid">
+            <mat-checkbox
+              [ngModel]="char().conditions.upset"
+              (ngModelChange)="updateCondition('upset', $event)"
+              >Upset</mat-checkbox
+            >
+            <mat-checkbox
+              [ngModel]="char().conditions.scared"
+              (ngModelChange)="updateCondition('scared', $event)"
+              >Scared</mat-checkbox
+            >
+            <mat-checkbox
+              [ngModel]="char().conditions.exhausted"
+              (ngModelChange)="updateCondition('exhausted', $event)"
+              >Exhausted</mat-checkbox
+            >
+            <mat-checkbox
+              [ngModel]="char().conditions.injured"
+              (ngModelChange)="updateCondition('injured', $event)"
+              >Injured</mat-checkbox
+            >
+            <mat-checkbox
+              [ngModel]="char().conditions.broken"
+              (ngModelChange)="updateCondition('broken', $event)"
+              >Broken</mat-checkbox
+            >
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Items -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Objets</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="item-list">
+            @for (item of char().items; track $index) {
+              <div class="item-row">
+                <mat-form-field appearance="outline" class="flex-grow">
+                  <mat-label>{{ $index === 0 ? 'Objet iconique' : 'Objet' }}</mat-label>
+                  <input
+                    matInput
+                    [ngModel]="item.name"
+                    (ngModelChange)="updateItem($index, $event)"
+                  />
+                </mat-form-field>
+                <div class="uses">
+                  @for (use of item.uses; track $index; let useIdx = $index) {
+                    <mat-checkbox
+                      [ngModel]="use"
+                      (ngModelChange)="updateItemUse($index, useIdx, $event)"
+                    ></mat-checkbox>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Hideout -->
+      <mat-card class="panel">
+        <mat-card-header>
+          <mat-card-title>Planque</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width">
+            <textarea
+              matInput
+              [ngModel]="char().hideout"
+              (ngModelChange)="updateField('hideout', $event)"
+              rows="3"
+              placeholder="Ton lieu secret"
+            ></textarea>
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-actions">
+      <button mat-stroked-button (click)="exportJson()">
+        <mat-icon>download</mat-icon> Exporter JSON
+      </button>
+      <button mat-stroked-button (click)="fileInput.click()">
+        <mat-icon>upload</mat-icon> Importer JSON
+      </button>
+      <input
+        #fileInput
+        type="file"
+        accept="application/json"
+        hidden
+        (change)="importJson($event)"
+      />
+      <button mat-stroked-button color="warn" (click)="reset()">
+        <mat-icon>restart_alt</mat-icon> Réinitialiser
+      </button>
+    </div>
+    <p class="footer-note">
+      Astuce : exporte le JSON pour sauvegarder ailleurs (Drive, GitHub...).
+    </p>
+  </footer>
+</div>

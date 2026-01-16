@@ -1,0 +1,249 @@
+$accent: #f08b1a;
+$accent-deep: #c8610d;
+$ink: #1e1b16;
+$muted: #6d6258;
+$panel-bg: #fff4e1;
+
+.sheet-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.hero-title {
+  h1 {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: clamp(2.4rem, 4vw, 3.6rem);
+    margin: 6px 0;
+    letter-spacing: 0.06em;
+  }
+  p {
+    margin: 0;
+    color: $muted;
+    max-width: 420px;
+  }
+}
+
+.hero-kicker {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: $accent;
+  color: #1b1106;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.hero-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.save-chip,
+.chip {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #fff;
+  border: 1px solid rgba($accent, 0.35);
+  box-shadow: 0 18px 45px rgba(40, 30, 18, 0.12);
+}
+
+.save-chip {
+  background: #1f1206;
+  color: #fff;
+  border: none;
+  transition: background 0.2s ease;
+  &.saving {
+    background: $accent;
+    color: #1b1106;
+  }
+}
+
+.sheet-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: 24px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel {
+  background: $panel-bg;
+  border: 2px solid #1f140a;
+  border-radius: 18px;
+
+  mat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+  }
+
+  mat-card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  mat-card-content {
+    padding-top: 0;
+  }
+}
+
+.panel-tag {
+  background: #1f140a;
+  color: #fff1d8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.field-grid {
+  display: grid;
+  gap: 12px;
+  &.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  &.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  @media (max-width: 600px) {
+    &.two, &.three {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.flex-grow {
+  flex: 1;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.line-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  .label {
+    min-width: 60px;
+    font-size: 0.85rem;
+    color: $muted;
+  }
+}
+
+.attribute {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(31, 20, 10, 0.2);
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.attribute-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.track-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.condition-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  .uses {
+    display: flex;
+    gap: 4px;
+  }
+}
+
+.footer {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.footer-note {
+  color: $muted;
+  font-size: 0.85rem;
+}

@@ -1,0 +1,56 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$tftl-primary: mat.m2-define-palette(mat.$m2-orange-palette, 600);
+$tftl-accent: mat.m2-define-palette(mat.$m2-brown-palette, 800);
+$tftl-warn: mat.m2-define-palette(mat.$m2-red-palette);
+
+$tftl-theme: mat.m2-define-light-theme((
+  color: (
+    primary: $tftl-primary,
+    accent: $tftl-accent,
+    warn: $tftl-warn,
+  ),
+  typography: mat.m2-define-typography-config(),
+  density: 0,
+));
+
+@include mat.all-component-themes($tftl-theme);
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Epilogue:wght@300;400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Epilogue', 'Segoe UI', sans-serif;
+  color: #1e1b16;
+  background: radial-gradient(circle at top, #ffe3bf 0%, #f6efe3 55%, #f2e4d1 100%);
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 139, 26, 0.18), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+body::before {
+  top: -120px;
+  right: -80px;
+}
+
+body::after {
+  bottom: -140px;
+  left: -110px;
+}
