@@ -54,8 +54,14 @@ export class CharacterSheetComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      if (!this.initialized) return;
       const c = this.char();
+      console.log(
+        '[CharacterSheet] effect triggered, initialized:',
+        this.initialized,
+        'char.name:',
+        c.identity.name,
+      );
+      if (!this.initialized) return;
       if (this.saveTimeout) clearTimeout(this.saveTimeout);
       this.saveTimeout = setTimeout(() => this.storage.save(c), 400);
     });

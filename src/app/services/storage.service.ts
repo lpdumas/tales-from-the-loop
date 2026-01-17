@@ -83,6 +83,8 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(character));
 
     const user = this.auth.user();
+    console.log('[StorageService] save() called, user:', user?.uid ?? 'null');
+
     if (user) {
       this._syncStatus.set('syncing');
 
@@ -90,10 +92,13 @@ export class StorageService {
       this.pendingSave = setTimeout(async () => {
         try {
           const docRef = doc(db, 'characters', user.uid);
-          await setDoc(docRef, JSON.parse(JSON.stringify(character)));
+          const data = JSON.parse(JSON.stringify(character));
+          console.log('[StorageService] Saving to Firestore:', docRef.path, data);
+          await setDoc(docRef, data);
+          console.log('[StorageService] Save successful!');
           this._syncStatus.set('synced');
         } catch (e) {
-          console.error('Failed to save to Firestore', e);
+          console.error('[StorageService] Failed to save to Firestore', e);
           this._syncStatus.set('error');
         }
       }, 800);
