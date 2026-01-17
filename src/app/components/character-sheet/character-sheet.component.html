@@ -3,15 +3,39 @@
     <div class="hero-title">
       <span class="hero-kicker">Tales From the Loop</span>
       <h1>Feuille de personnage</h1>
-      <p>Tout est sauvegardé automatiquement dans ce navigateur.</p>
+      <p>
+        @if (auth.isLoggedIn()) {
+          Synchronisé avec le cloud — {{ auth.user()?.email }}
+        } @else {
+          Connecte-toi pour synchroniser entre appareils.
+        }
+      </p>
     </div>
     <div class="hero-actions">
-      <span class="save-chip" [class.saving]="saveStatus() === 'saving'">
-        {{ saveStatus() === 'saving' ? 'Sauvegarde...' : 'Sauvegardé' }}
-      </span>
-      <span class="chip">Local-only</span>
+      @if (auth.loading()) {
+        <mat-spinner diameter="24"></mat-spinner>
+      } @else if (auth.isLoggedIn()) {
+        <button mat-stroked-button [matMenuTriggerFor]="userMenu" class="user-btn">
+          <img [src]="auth.user()?.photoURL" class="avatar" alt="" />
+          {{ auth.user()?.displayName?.split(' ')?.[0] }}
+          <mat-icon>expand_more</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Déconnexion</span>
+          </button>
+        </mat-menu>
+      } @else {
+        <button mat-flat-button color="primary" (click)="login()">
+          <mat-icon>login</mat-icon>
+          Connexion Google
+        </button>
+      }
     </div>
   </header>
+
+  <app-sync-indicator />
 
   <main class="sheet-grid">
     <div class="column left">

@@ -247,3 +247,16 @@ $panel-bg: #fff4e1;
   color: $muted;
   font-size: 0.85rem;
 }
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
