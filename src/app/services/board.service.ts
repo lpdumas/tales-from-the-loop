@@ -3,6 +3,7 @@ import {
   doc,
   collection,
   setDoc,
+  getDoc,
   deleteDoc,
   onSnapshot,
   Unsubscribe,
@@ -11,6 +12,7 @@ import {
   where,
   getDocs,
   writeBatch,
+  updateDoc,
 } from 'firebase/firestore';
 import { AuthService } from './auth.service';
 import { db } from '../firebase.config';
@@ -18,15 +20,16 @@ import {
   InvestigationCard,
   CardLink,
   BoardMetadata,
+  BoardMember,
+  BoardRole,
   generateId,
+  generateShareCode,
   createDefaultCard,
   createDefaultLink,
   createDefaultBoard,
 } from '../models/investigation-board.model';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';
-
-const DEFAULT_BOARD_ID = 'default';
 
 @Injectable({ providedIn: 'root' })
 export class BoardService {
@@ -36,15 +39,19 @@ export class BoardService {
   private readonly _cards = signal<Map<string, InvestigationCard>>(new Map());
   private readonly _links = signal<Map<string, CardLink>>(new Map());
   private readonly _boardMetadata = signal<BoardMetadata | null>(null);
+  private readonly _userBoards = signal<BoardMetadata[]>([]);
 
+  private boardUnsub: Unsubscribe | null = null;
   private cardsUnsub: Unsubscribe | null = null;
   private linksUnsub: Unsubscribe | null = null;
+  private userBoardsUnsub: Unsubscribe | null = null;
   private pendingSaves = new Map<string, ReturnType<typeof setTimeout>>();
 
   readonly syncStatus = this._syncStatus.asReadonly();
   readonly cards = this._cards.asReadonly();
   readonly links = this._links.asReadonly();
   readonly boardMetadata = this._boardMetadata.asReadonly();
+  readonly userBoards = this._userBoards.asReadonly();
 
   private currentBoardId: string | null = null;
 
@@ -52,29 +59,67 @@ export class BoardService {
     effect(() => {
       const user = this.auth.user();
       if (user) {
-        this.loadBoard(DEFAULT_BOARD_ID);
+        this.subscribeToUserBoards();
       } else {
         this.unsubscribeAll();
         this._syncStatus.set('offline');
         this._cards.set(new Map());
         this._links.set(new Map());
         this._boardMetadata.set(null);
+        this._userBoards.set([]);
       }
     });
   }
 
+  // Paths are now at root level for shared access
   private getBoardPath(boardId: string): string {
-    const user = this.auth.user();
-    if (!user) throw new Error('User not authenticated');
-    return `users/${user.uid}/boards/${boardId}`;
+    return `boards/${boardId}`;
   }
 
   private getCardsPath(boardId: string): string {
-    return `${this.getBoardPath(boardId)}/cards`;
+    return `boards/${boardId}/cards`;
   }
 
   private getLinksPath(boardId: string): string {
-    return `${this.getBoardPath(boardId)}/links`;
+    return `boards/${boardId}/links`;
+  }
+
+  private getPresencePath(boardId: string): string {
+    return `boards/${boardId}/presence`;
+  }
+
+  private subscribeToUserBoards(): void {
+    const user = this.auth.user();
+    if (!user) return;
+
+    if (this.userBoardsUnsub) {
+      this.userBoardsUnsub();
+    }
+
+    // Query boards where user is a member
+    const boardsRef = collection(db, 'boards');
+    const q = query(boardsRef, where(`members.${user.uid}.odId`, '==', user.uid));
+
+    this.userBoardsUnsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const boards: BoardMetadata[] = [];
+        snapshot.forEach((doc) => {
+          boards.push({ ...doc.data(), id: doc.id } as BoardMetadata);
+        });
+        this._userBoards.set(boards);
+
+        // Auto-load first board or create default
+        if (boards.length > 0 && !this.currentBoardId) {
+          this.loadBoard(boards[0].id);
+        } else if (boards.length === 0 && !this.currentBoardId) {
+          this.createBoard('Investigation Board');
+        }
+      },
+      (error) => {
+        console.error('[BoardService] User boards sync error:', error);
+      }
+    );
   }
 
   async loadBoard(boardId: string): Promise<void> {
@@ -84,12 +129,13 @@ export class BoardService {
       return;
     }
 
-    this.unsubscribeAll();
+    // Unsubscribe from previous board (but keep userBoards subscription)
+    this.unsubscribeFromBoard();
     this.currentBoardId = boardId;
     this._syncStatus.set('syncing');
 
     try {
-      await this.ensureBoardExists(boardId);
+      this.subscribeToBoardMetadata(boardId);
       this.subscribeToCards(boardId);
       this.subscribeToLinks(boardId);
     } catch (error) {
@@ -98,22 +144,55 @@ export class BoardService {
     }
   }
 
-  private async ensureBoardExists(boardId: string): Promise<void> {
+  async createBoard(name: string): Promise<string | null> {
     const user = this.auth.user();
-    if (!user) return;
+    if (!user) return null;
+
+    const boardId = generateId();
+    const boardData = createDefaultBoard(
+      user.uid,
+      user.displayName || 'Anonymous',
+      user.email || ''
+    );
 
     const boardRef = doc(db, this.getBoardPath(boardId));
-    const boardData = createDefaultBoard(user.uid);
+    this._syncStatus.set('syncing');
 
-    await setDoc(
-      boardRef,
-      {
+    try {
+      await setDoc(boardRef, {
         ...boardData,
         id: boardId,
+        members: {
+          [user.uid]: {
+            ...boardData.members[user.uid],
+            joinedAt: serverTimestamp(),
+          },
+        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+
+      await this.loadBoard(boardId);
+      return boardId;
+    } catch (error) {
+      console.error('[BoardService] Failed to create board:', error);
+      this._syncStatus.set('error');
+      return null;
+    }
+  }
+
+  private subscribeToBoardMetadata(boardId: string): void {
+    const boardRef = doc(db, this.getBoardPath(boardId));
+    this.boardUnsub = onSnapshot(
+      boardRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          this._boardMetadata.set({ ...snapshot.data(), id: snapshot.id } as BoardMetadata);
+        }
       },
-      { merge: true }
+      (error) => {
+        console.error('[BoardService] Board metadata sync error:', error);
+      }
     );
   }
 
@@ -155,7 +234,11 @@ export class BoardService {
     );
   }
 
-  private unsubscribeAll(): void {
+  private unsubscribeFromBoard(): void {
+    if (this.boardUnsub) {
+      this.boardUnsub();
+      this.boardUnsub = null;
+    }
     if (this.cardsUnsub) {
       this.cardsUnsub();
       this.cardsUnsub = null;
@@ -168,6 +251,135 @@ export class BoardService {
     this.pendingSaves.clear();
     this.currentBoardId = null;
   }
+
+  private unsubscribeAll(): void {
+    this.unsubscribeFromBoard();
+    if (this.userBoardsUnsub) {
+      this.userBoardsUnsub();
+      this.userBoardsUnsub = null;
+    }
+  }
+
+  // ===== Sharing Methods =====
+
+  async generateShareLink(): Promise<string | null> {
+    if (!this.currentBoardId) return null;
+
+    const shareCode = generateShareCode();
+    const boardRef = doc(db, this.getBoardPath(this.currentBoardId));
+
+    try {
+      await updateDoc(boardRef, {
+        shareCode,
+        updatedAt: serverTimestamp(),
+      });
+      return shareCode;
+    } catch (error) {
+      console.error('[BoardService] Failed to generate share link:', error);
+      return null;
+    }
+  }
+
+  async joinBoardByCode(shareCode: string): Promise<string | null> {
+    const user = this.auth.user();
+    if (!user) return null;
+
+    try {
+      // Find board with this share code
+      const boardsRef = collection(db, 'boards');
+      const q = query(boardsRef, where('shareCode', '==', shareCode));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        console.error('[BoardService] No board found with share code:', shareCode);
+        return null;
+      }
+
+      const boardDoc = snapshot.docs[0];
+      const boardId = boardDoc.id;
+      const boardData = boardDoc.data() as BoardMetadata;
+
+      // Check if already a member
+      if (boardData.members[user.uid]) {
+        await this.loadBoard(boardId);
+        return boardId;
+      }
+
+      // Add user as editor
+      const boardRef = doc(db, this.getBoardPath(boardId));
+      await updateDoc(boardRef, {
+        [`members.${user.uid}`]: {
+          odId: user.uid,
+          odName: user.displayName || 'Anonymous',
+          odEmail: user.email || '',
+          odPhotoURL: user.photoURL || null,
+          role: 'editor' as BoardRole,
+          joinedAt: serverTimestamp(),
+        },
+        updatedAt: serverTimestamp(),
+      });
+
+      await this.loadBoard(boardId);
+      return boardId;
+    } catch (error) {
+      console.error('[BoardService] Failed to join board:', error);
+      return null;
+    }
+  }
+
+  async updateMemberRole(memberId: string, role: BoardRole): Promise<void> {
+    if (!this.currentBoardId) return;
+
+    const boardRef = doc(db, this.getBoardPath(this.currentBoardId));
+
+    try {
+      await updateDoc(boardRef, {
+        [`members.${memberId}.role`]: role,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('[BoardService] Failed to update member role:', error);
+    }
+  }
+
+  async removeMember(memberId: string): Promise<void> {
+    if (!this.currentBoardId) return;
+
+    const board = this._boardMetadata();
+    if (!board || board.ownerId === memberId) {
+      console.error('[BoardService] Cannot remove board owner');
+      return;
+    }
+
+    const boardRef = doc(db, this.getBoardPath(this.currentBoardId));
+    const { [memberId]: removed, ...remainingMembers } = board.members;
+
+    try {
+      await updateDoc(boardRef, {
+        members: remainingMembers,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('[BoardService] Failed to remove member:', error);
+    }
+  }
+
+  async updateBoardName(name: string): Promise<void> {
+    if (!this.currentBoardId) return;
+
+    const boardRef = doc(db, this.getBoardPath(this.currentBoardId));
+
+    try {
+      await updateDoc(boardRef, {
+        name,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('[BoardService] Failed to update board name:', error);
+    }
+  }
+
+  // ===== Card Methods =====
 
   async addCard(position: { x: number; y: number }): Promise<string | null> {
     const user = this.auth.user();
@@ -286,6 +498,8 @@ export class BoardService {
     }
   }
 
+  // ===== Link Methods =====
+
   async addLink(sourceCardId: string, targetCardId: string): Promise<string | null> {
     if (!this.currentBoardId) return null;
 
@@ -347,5 +561,16 @@ export class BoardService {
       console.error('[BoardService] Failed to delete link:', error);
       this._syncStatus.set('error');
     }
+  }
+
+  // ===== Getters =====
+
+  getCurrentBoardId(): string | null {
+    return this.currentBoardId;
+  }
+
+  getPresenceCollectionPath(): string | null {
+    if (!this.currentBoardId) return null;
+    return this.getPresencePath(this.currentBoardId);
   }
 }

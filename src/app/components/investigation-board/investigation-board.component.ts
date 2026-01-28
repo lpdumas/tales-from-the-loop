@@ -8,6 +8,7 @@ import {
   signal,
   effect,
   AfterViewInit,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +22,7 @@ import { dia, shapes } from '@joint/core';
 
 import { AuthService } from '../../services/auth.service';
 import { BoardService } from '../../services/board.service';
+import { BoardPresenceService } from '../../services/board-presence.service';
 import {
   InvestigationCard,
   CardLink,
@@ -36,6 +38,9 @@ import {
 import { CardLinkShape, createCardLinkShape } from '../../shapes/card-link.shape';
 import { CardDialogComponent, CardDialogData } from './card-dialog.component';
 import { BoardSyncIndicatorComponent } from './board-sync-indicator.component';
+import { CursorOverlayComponent } from './cursor-overlay.component';
+import { ShareDialogComponent } from './share-dialog.component';
+import { CollaboratorsComponent } from './collaborators.component';
 
 @Component({
   selector: 'app-investigation-board',
@@ -50,15 +55,19 @@ import { BoardSyncIndicatorComponent } from './board-sync-indicator.component';
     MatTooltipModule,
     RouterModule,
     BoardSyncIndicatorComponent,
+    CursorOverlayComponent,
+    CollaboratorsComponent,
   ],
   templateUrl: './investigation-board.component.html',
   styleUrl: './investigation-board.component.scss',
 })
 export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('canvasWrapper', { static: true }) canvasWrapperRef!: ElementRef<HTMLDivElement>;
 
   readonly auth = inject(AuthService);
   readonly boardService = inject(BoardService);
+  readonly presenceService = inject(BoardPresenceService);
   private readonly dialog = inject(MatDialog);
 
   private graph!: dia.Graph;
@@ -68,6 +77,7 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
   private linkSourceId: string | null = null;
 
   readonly selectedCardId = signal<string | null>(null);
+  readonly canvasOffset = signal({ x: 0, y: 0 });
 
   readonly cardColors = Object.entries(CARD_COLORS).map(([key, value]) => ({
     key: key as CardColor,
@@ -93,6 +103,12 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
         this.syncGraphFromFirestore(cards, links);
       }
     });
+
+    // Update presence when card is selected
+    effect(() => {
+      const cardId = this.selectedCardId();
+      this.presenceService.updateSelectedCard(cardId);
+    });
   }
 
   ngOnInit(): void {
@@ -101,6 +117,7 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
 
   ngAfterViewInit(): void {
     this.initPaper();
+    this.updateCanvasOffset();
   }
 
   ngOnDestroy(): void {
@@ -108,6 +125,18 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
       clearTimeout(this.updateTimeout);
     }
     this.paper?.remove();
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.updateCanvasOffset();
+  }
+
+  private updateCanvasOffset(): void {
+    if (this.canvasWrapperRef?.nativeElement) {
+      const rect = this.canvasWrapperRef.nativeElement.getBoundingClientRect();
+      this.canvasOffset.set({ x: rect.left, y: rect.top });
+    }
   }
 
   private initGraph(): void {
@@ -138,6 +167,15 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private setupEventHandlers(): void {
+    // Track mouse movement for presence
+    this.paper.on('blank:pointermove', (evt, x, y) => {
+      this.presenceService.updateCursorPosition(x, y);
+    });
+
+    this.paper.on('element:pointermove', (cellView, evt, x, y) => {
+      this.presenceService.updateCursorPosition(x, y);
+    });
+
     // Double-click on blank area to add card
     this.paper.on('blank:pointerdblclick', (evt, x, y) => {
       this.addCard(x, y);
@@ -317,6 +355,9 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
     const card = this.boardService.cards().get(cardId);
     if (!card) return;
 
+    // Signal that we're editing this card
+    this.presenceService.updateEditingCard(cardId);
+
     const dialogRef = this.dialog.open(CardDialogComponent, {
       width: '400px',
       data: {
@@ -328,6 +369,9 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
     });
 
     dialogRef.afterClosed().subscribe((result: CardDialogData | undefined) => {
+      // Clear editing state
+      this.presenceService.updateEditingCard(null);
+
       if (result) {
         this.boardService.updateCard(cardId, {
           title: result.title,
@@ -372,5 +416,11 @@ export class InvestigationBoardComponent implements OnInit, AfterViewInit, OnDes
     if (cardId) {
       this.boardService.updateCard(cardId, { cardType: type });
     }
+  }
+
+  openShareDialog(): void {
+    this.dialog.open(ShareDialogComponent, {
+      width: '450px',
+    });
   }
 }
