@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Character sheets (existing)
+    match /characters/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Investigation boards
+    match /users/{userId}/boards/{boardId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Cards subcollection
+      match /cards/{cardId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Links subcollection
+      match /links/{linkId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

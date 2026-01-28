@@ -1,0 +1,96 @@
+<div class="board-container">
+  <!-- Header -->
+  <header class="board-header">
+    <div class="header-left">
+      <a routerLink="/" class="back-link" matTooltip="Back to Character Sheet">
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <h1>Investigation Board</h1>
+    </div>
+
+    <div class="header-actions">
+      @if (auth.isLoggedIn()) {
+        <!-- Add Card -->
+        <button mat-raised-button color="primary" (click)="addCard()">
+          <mat-icon>add</mat-icon>
+          Add Card
+        </button>
+
+        @if (selectedCardId()) {
+          <!-- Card Actions -->
+          <button mat-stroked-button (click)="editCard(selectedCardId()!)">
+            <mat-icon>edit</mat-icon>
+            Edit
+          </button>
+
+          <button mat-stroked-button [matMenuTriggerFor]="colorMenu">
+            <mat-icon>palette</mat-icon>
+            Color
+          </button>
+
+          <button mat-stroked-button [matMenuTriggerFor]="typeMenu">
+            <mat-icon>label</mat-icon>
+            Type
+          </button>
+
+          <button
+            mat-stroked-button
+            (click)="startLinking()"
+            [class.active]="isLinking()"
+          >
+            <mat-icon>link</mat-icon>
+            {{ isLinking() ? 'Click target...' : 'Link' }}
+          </button>
+
+          @if (isLinking()) {
+            <button mat-stroked-button color="warn" (click)="cancelLinking()">
+              <mat-icon>close</mat-icon>
+              Cancel
+            </button>
+          }
+
+          <button mat-stroked-button color="warn" (click)="deleteSelectedCard()">
+            <mat-icon>delete</mat-icon>
+            Delete
+          </button>
+        }
+      } @else {
+        <span class="login-hint">Log in to save your board</span>
+      }
+    </div>
+  </header>
+
+  <!-- Color Menu -->
+  <mat-menu #colorMenu="matMenu">
+    @for (color of cardColors; track color.key) {
+      <button mat-menu-item (click)="setCardColor(color.key)">
+        <span class="color-swatch" [style.background]="color.value"></span>
+        {{ color.key | titlecase }}
+      </button>
+    }
+  </mat-menu>
+
+  <!-- Type Menu -->
+  <mat-menu #typeMenu="matMenu">
+    @for (type of cardTypes; track type.key) {
+      <button mat-menu-item (click)="setCardType(type.key)">
+        {{ type.label }}
+      </button>
+    }
+  </mat-menu>
+
+  <!-- Canvas -->
+  <div class="canvas-wrapper">
+    <div #canvas class="canvas"></div>
+    <div class="canvas-hint">
+      @if (!auth.isLoggedIn()) {
+        <p>Log in to create and save investigation cards</p>
+      } @else if (boardService.cards().size === 0) {
+        <p>Double-click anywhere to add a card</p>
+      }
+    </div>
+  </div>
+
+  <!-- Sync Indicator -->
+  <app-board-sync-indicator></app-board-sync-indicator>
+</div>

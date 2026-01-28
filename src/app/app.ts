@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
-import { CharacterSheetComponent } from './components/character-sheet/character-sheet.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CharacterSheetComponent],
-  template: '<app-character-sheet />',
+  imports: [RouterOutlet],
+  template: '<router-outlet />',
   styles: [],
 })
 export class App {}
